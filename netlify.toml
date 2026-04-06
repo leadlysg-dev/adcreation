@@ -8,20 +8,8 @@
 
 [functions]
   node_bundler = "esbuild"
-  included_files = ["netlify/functions/package.json"]
-
-[build.environment]
-  NODE_VERSION = "18"
-
-[functions]
   external_node_modules = ["node-fetch"]
-  node_bundler = "esbuild"
-
-[functions."claude-proxy"]
-  timeout = 60
-
-[functions."grok-image"]
-  timeout = 60
+  included_files = ["netlify/functions/package.json"]
 
 [[redirects]]
   from = "/*"
