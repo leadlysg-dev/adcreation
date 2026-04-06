@@ -188,55 +188,82 @@ export default function App() {
   const toggleHook = (i) => setSelected(p => p.includes(i) ? p.filter(x => x !== i) : p.length >= 3 ? p : [...p, i]);
   const getImg = (i) => finalImages[i] || imageUrls[i] || null;
 
-  const exportCSV = () => {
-    const esc = (s) => '"' + (s || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"';
-    const header = isStatic ? 'Ad #,Hook,Headline,Primary Text,Description,CTA,Subtext,Tagline' : 'Ad #,Hook,Headline,Primary Text,Description,CTA';
-    const rows = ads.map((a, i) => {
-      const base = [i + 1, esc(a.hookTitle), esc(a.headline), esc(a.primaryText), esc(a.description), esc(a.cta)];
-      if (isStatic) base.push(esc(a.subtext), esc(a.tagline));
-      return base.join(',');
-    });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv' })); a.download = 'leadly-ads.csv'; a.click();
-  };
-
-  const downloadImages = async () => {
-    setLoading(true); setLoadMsg('Downloading...');
-    for (let i = 0; i < ads.length; i++) {
-      const src = getImg(i); if (!src) continue;
-      const name = `hook${(ads[i]?.hookIndex ?? 0) + 1}_ad${(i % 4) + 1}${finalImages[i] ? '_final' : '_base'}.jpg`;
-      const a = document.createElement('a');
-      
-      if (src.startsWith('data:')) {
-        // Data URLs (overlaid images) — download directly
-        a.href = src;
-        a.download = name;
-        a.click();
-      } else {
-        // External URLs (Grok images) — proxy through canvas to avoid CORS
-        try {
-          const dataUrl = await new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-              const c = document.createElement('canvas');
-              c.width = img.width; c.height = img.height;
-              c.getContext('2d').drawImage(img, 0, 0);
-              resolve(c.toDataURL('image/jpeg', 0.95));
-            };
-            img.onerror = () => reject(new Error('Image load failed'));
-            img.src = src;
-          });
-          a.href = dataUrl;
-          a.download = name;
-          a.click();
-        } catch {
-          // Fallback: open in new tab for manual save
-          window.open(src, '_blank');
-        }
+  const exportAll = async () => {
+    setLoading(true); setLoadMsg('Packaging your export...');
+    try {
+      // Load JSZip from CDN
+      if (!window.JSZip) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
       }
-      await new Promise(r => setTimeout(r, 500));
-    }
-    setLoading(false);
+      const zip = new window.JSZip();
+
+      // Generate CSV
+      const esc = (s) => '"' + (s || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"';
+      const header = isStatic ? 'Ad #,Hook,Headline,Primary Text,Description,CTA,Subtext,Tagline,Image Filename' : 'Ad #,Hook,Headline,Primary Text,Description,CTA';
+      const csvRows = [];
+
+      // Process each ad
+      for (let i = 0; i < ads.length; i++) {
+        const ad = ads[i];
+        const hookNum = (ad.hookIndex ?? 0) + 1;
+        const varNum = (i % 4) + 1;
+        // Clean headline for filename: lowercase, replace spaces with underscores, remove special chars
+        const cleanHeadline = (ad.headline || 'ad').toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 40);
+        const imgName = `hook${hookNum}_ad${varNum}_${cleanHeadline}.jpg`;
+
+        // Add image to zip if static mode
+        if (isStatic) {
+          const src = getImg(i);
+          if (src) {
+            setLoadMsg(`Packaging image ${i + 1}/${ads.length}...`);
+            try {
+              let dataUrl = src;
+              if (!src.startsWith('data:')) {
+                // Convert external URL to data URL via canvas
+                dataUrl = await new Promise((resolve, reject) => {
+                  const img = new Image();
+                  img.crossOrigin = 'anonymous';
+                  img.onload = () => {
+                    const c = document.createElement('canvas');
+                    c.width = img.width; c.height = img.height;
+                    c.getContext('2d').drawImage(img, 0, 0);
+                    resolve(c.toDataURL('image/jpeg', 0.95));
+                  };
+                  img.onerror = () => reject(new Error('Failed'));
+                  img.src = src;
+                });
+              }
+              // Strip data URL prefix to get raw base64
+              const base64 = dataUrl.split(',')[1];
+              zip.file(imgName, base64, { base64: true });
+            } catch (e) { console.error(`Image ${i + 1} zip failed:`, e); }
+          }
+        }
+
+        // Build CSV row
+        const base = [i + 1, esc(ad.hookTitle), esc(ad.headline), esc(ad.primaryText), esc(ad.description), esc(ad.cta)];
+        if (isStatic) base.push(esc(ad.subtext), esc(ad.tagline), esc(imgName));
+        csvRows.push(base.join(','));
+      }
+
+      // Add CSV to zip
+      zip.file('ad-captions.csv', header + '\n' + csvRows.join('\n'));
+
+      // Generate and download zip
+      setLoadMsg('Creating zip file...');
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'leadly-ads-export.zip';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { setError('Export failed: ' + e.message); }
+    finally { setLoading(false); }
   };
 
   const exportConfig = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(overlayConfig, null, 2)], { type: 'application/json' })); a.download = 'overlay_config.json'; a.click(); };
@@ -338,8 +365,7 @@ export default function App() {
               {isStatic && <button onClick={() => setShowEditor(!showEditor)} style={$.chip(showEditor)}>{showEditor ? 'Hide editor' : 'Overlay config'}</button>}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={exportCSV} style={$.btnG}>Export CSV</button>
-              {isStatic && Object.keys(imageUrls).length > 0 && <button onClick={downloadImages} style={$.btn}>Download images</button>}
+              <button onClick={exportAll} style={$.btnG}>Export all (ZIP)</button>
             </div>
           </div>
 
