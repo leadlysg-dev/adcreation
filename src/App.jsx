@@ -222,25 +222,21 @@ export default function App() {
           if (src) {
             setLoadMsg(`Packaging image ${i + 1}/${ads.length}...`);
             try {
-              let dataUrl = src;
-              if (!src.startsWith('data:')) {
-                // Convert external URL to data URL via canvas
-                dataUrl = await new Promise((resolve, reject) => {
-                  const img = new Image();
-                  img.crossOrigin = 'anonymous';
-                  img.onload = () => {
-                    const c = document.createElement('canvas');
-                    c.width = img.width; c.height = img.height;
-                    c.getContext('2d').drawImage(img, 0, 0);
-                    resolve(c.toDataURL('image/jpeg', 0.95));
-                  };
-                  img.onerror = () => reject(new Error('Failed'));
-                  img.src = src;
+              let base64;
+              if (src.startsWith('data:')) {
+                // Already a data URL (overlaid image) — extract base64
+                base64 = src.split(',')[1];
+              } else {
+                // External URL (Grok image) — proxy through server to bypass CORS
+                const proxyRes = await fetch('/.netlify/functions/image-proxy', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url: src }),
                 });
+                const proxyData = await proxyRes.json();
+                if (proxyData.base64) base64 = proxyData.base64;
               }
-              // Strip data URL prefix to get raw base64
-              const base64 = dataUrl.split(',')[1];
-              zip.file(imgName, base64, { base64: true });
+              if (base64) zip.file(imgName, base64, { base64: true });
             } catch (e) { console.error(`Image ${i + 1} zip failed:`, e); }
           }
         }
