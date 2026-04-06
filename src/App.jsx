@@ -119,7 +119,7 @@ export default function App() {
   function setCfg(sec, key, val) { setOverlayConfig(p => ({ ...p, [sec]: { ...p[sec], [key]: val } })); }
 
   const isStatic = mode === 'static';
-  const steps = isStatic ? ['Upload', 'Pick 3 hooks', 'Generate all', 'Preview'] : ['Upload', 'Pick 3 hooks', 'Generate captions', 'Export'];
+  const steps = isStatic ? ['Upload', 'Pick 2 hooks', 'Generate all', 'Preview'] : ['Upload', 'Pick 2 hooks', 'Generate captions', 'Export'];
 
   const analyse = async () => {
     setLoading(true); setLoadMsg('Analysing...'); setError(null);
@@ -131,7 +131,7 @@ export default function App() {
         if (f.type === 'application/pdf') content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: await fileToBase64(f) } });
         else content.push({ type: 'text', text: `[${f.name}]\n${await f.text()}` });
       }
-      content.push({ type: 'text', text: `Analyse these and generate exactly 5 hooks/angles.\n\nPlatform: ${platform} | CTA: ${cta}\nObjective: ${objective || 'Infer'}\nAudience: ${audience || 'Infer'}\n\nReturn ONLY JSON array of 5 objects:\n{ "title": "hook name", "description": "2-3 sentences", "why": "1 sentence", "emotionalTrigger": "fear|guilt|aspiration|logic|urgency" }` });
+      content.push({ type: 'text', text: `Analyse these and generate exactly 3 hooks/angles.\n\nPlatform: ${platform} | CTA: ${cta}\nObjective: ${objective || 'Infer'}\nAudience: ${audience || 'Infer'}\n\nReturn ONLY JSON array of 3 objects:\n{ "title": "hook name", "description": "2-3 sentences", "why": "1 sentence", "emotionalTrigger": "fear|guilt|aspiration|logic|urgency" }` });
       const text = await callClaude('You are Leadly\'s ad strategist for Singapore social ads. Output ONLY valid JSON.', [{ role: 'user', content }]);
       setHooks(parseJSON(text)); setError(null); setStep(1);
     } catch (e) { setError(e.message); } finally { setLoading(false); }
@@ -150,7 +150,7 @@ export default function App() {
         setLoadMsg(`Writing ${isStatic ? 'ads' : 'captions'} for hook ${h + 1}/3...`);
         const text = await callClaude(
           'You are Leadly\'s ad copywriter for Singapore Meta ads. Output ONLY valid JSON array.',
-          [{ role: 'user', content: `Generate exactly 4 variations for:\n\nHOOK: "${chosen[h].title}" — ${chosen[h].description}\n\nPlatform: ${platform} | CTA: ${cta} | Objective: ${objective} | Audience: ${audience}\n\nEach object: hookIndex (${h}), hookTitle ("${chosen[h].title}"), headline (<40ch), primaryText (3-5 paragraphs \\n\\n), description (<90ch), cta (button text)${extraFields}\n\nReturn JSON array of 4. DISTINCTLY different.` }]
+          [{ role: 'user', content: `Generate exactly 3 variations for:\n\nHOOK: "${chosen[h].title}" — ${chosen[h].description}\n\nPlatform: ${platform} | CTA: ${cta} | Objective: ${objective} | Audience: ${audience}\n\nEach object: hookIndex (${h}), hookTitle ("${chosen[h].title}"), headline (<40ch), primaryText (3-5 paragraphs \\n\\n), description (<90ch), cta (button text)${extraFields}\n\nReturn JSON array of 3. DISTINCTLY different.` }]
         );
         allAds.push(...parseJSON(text));
       }
@@ -185,7 +185,7 @@ export default function App() {
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
 
-  const toggleHook = (i) => setSelected(p => p.includes(i) ? p.filter(x => x !== i) : p.length >= 3 ? p : [...p, i]);
+  const toggleHook = (i) => setSelected(p => p.includes(i) ? p.filter(x => x !== i) : p.length >= 2 ? p : [...p, i]);
   const getImg = (i) => finalImages[i] || imageUrls[i] || null;
 
   const exportAll = async () => {
@@ -211,7 +211,7 @@ export default function App() {
       for (let i = 0; i < ads.length; i++) {
         const ad = ads[i];
         const hookNum = (ad.hookIndex ?? 0) + 1;
-        const varNum = (i % 4) + 1;
+        const varNum = (i % 3) + 1;
         // Clean headline for filename: lowercase, replace spaces with underscores, remove special chars
         const cleanHeadline = (ad.headline || 'ad').toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 40);
         const imgName = `hook${hookNum}_ad${varNum}_${cleanHeadline}.jpg`;
@@ -342,7 +342,7 @@ export default function App() {
 
         {/* STEP 1: Pick hooks */}
         {step === 1 && <div>
-          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: '1rem', lineHeight: 1.6 }}>Pick exactly 3 hooks. {isStatic ? 'One click generates ads, images, and overlays.' : 'One click generates all captions.'}</p>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: '1rem', lineHeight: 1.6 }}>Pick exactly 2 hooks. {isStatic ? 'One click generates ads, images, and overlays.' : 'One click generates all captions.'}</p>
           {hooks.map((h, i) => <div key={i} onClick={() => toggleHook(i)} style={{ ...$.card, cursor: 'pointer', border: selected.includes(i) ? '2px solid var(--info)' : $.card.border, background: selected.includes(i) ? 'var(--info-bg)' : $.card.background }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <div style={{ display: 'flex', gap: 8 }}><span style={$.badge('info')}>Hook {i + 1}</span><span style={$.badge('accent')}>{h.emotionalTrigger}</span></div>
@@ -352,7 +352,7 @@ export default function App() {
             <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>{h.description}</p>
             <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6, fontStyle: 'italic' }}>{h.why}</p>
           </div>)}
-          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{selected.length}/3 selected</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{selected.length}/2 selected</p>
         </div>}
 
         {/* STEP 3: Results */}
@@ -402,7 +402,7 @@ export default function App() {
           </div>}
 
           {/* Ads list */}
-          {[0, 1, 2].map(hi => {
+          {selected.map((_, hi) => {
             const ha = ads.filter(a => a.hookIndex === hi);
             if (!ha.length) return null;
             return (<div key={hi}>
@@ -464,7 +464,7 @@ export default function App() {
         {step <= 1 && <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '1rem', borderTop: '0.5px solid var(--border)' }}>
           <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} style={{ opacity: step === 0 ? 0.3 : 1 }}>Back</button>
           {step === 0 && <button onClick={analyse} disabled={!exampleAds.length && !productDocs.length} style={{ ...$.btn, opacity: (!exampleAds.length && !productDocs.length) ? 0.4 : 1 }}>Analyse and generate hooks</button>}
-          {step === 1 && <button onClick={generateAll} disabled={selected.length !== 3} style={{ ...$.btnG, opacity: selected.length !== 3 ? 0.4 : 1 }}>{isStatic ? 'Generate 12 ads + images' : 'Generate 12 captions'}</button>}
+          {step === 1 && <button onClick={generateAll} disabled={selected.length !== 2} style={{ ...$.btnG, opacity: selected.length !== 2 ? 0.4 : 1 }}>{isStatic ? 'Generate 6 ads + images' : 'Generate 6 captions'}</button>}
         </div>}
       </>}
     </div>
