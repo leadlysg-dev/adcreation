@@ -1,0 +1,29 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["netlify/functions/package.json"]
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[functions]
+  external_node_modules = ["node-fetch"]
+  node_bundler = "esbuild"
+
+[functions."claude-proxy"]
+  timeout = 60
+
+[functions."grok-image"]
+  timeout = 60
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
