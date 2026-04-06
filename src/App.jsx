@@ -110,7 +110,6 @@ export default function App() {
   const [imageUrls, setImageUrls] = useState({});
   const [finalImages, setFinalImages] = useState({});
   const [imgProgress, setImgProgress] = useState({ done: 0, total: 0, current: '' });
-  const [feedView, setFeedView] = useState(false);
 
   const [overlayConfig, setOverlayConfig] = useState(DEFAULT_OVERLAY);
   const [showEditor, setShowEditor] = useState(false);
@@ -330,10 +329,6 @@ export default function App() {
           {isStatic && <DropZone label="Reference overlay designs (optional)" hint="Ad images with text overlays you like — AI will match the style" files={refOverlays} setFiles={setRefOverlays} accept="image/*" />}
           <div style={{ marginBottom: '1.25rem' }}><label style={$.label}>Ad objective</label><textarea value={objective} onChange={e => setObjective(e.target.value)} rows={2} placeholder="e.g. Drive lead form fills for disability insurance, SG 30-55" style={{ resize: 'vertical', lineHeight: 1.6 }} /></div>
           <div style={{ marginBottom: '1.25rem' }}><label style={$.label}>Target audience</label><textarea value={audience} onChange={e => setAudience(e.target.value)} rows={2} placeholder="e.g. Singapore working adults 30-55" style={{ resize: 'vertical', lineHeight: 1.6 }} /></div>
-          <div style={{ display: 'flex', gap: 24, marginBottom: '1.25rem' }}>
-            <div style={{ flex: 1 }}><label style={$.label}>Platform</label><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{['Meta (FB/IG)', 'TikTok', 'Google', 'LinkedIn'].map(p => <button key={p} onClick={() => setPlatform(p)} style={$.chip(platform === p)}>{p}</button>)}</div></div>
-            <div style={{ flex: 1 }}><label style={$.label}>CTA goal</label><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{['Lead form fill', 'WhatsApp msg', 'Book appt', 'Website visit'].map(c => <button key={c} onClick={() => setCta(c)} style={$.chip(cta === c)}>{c}</button>)}</div></div>
-          </div>
         </div>}
 
         {/* STEP 1: Pick hooks */}
@@ -356,8 +351,6 @@ export default function App() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 14, fontWeight: 500 }}>{ads.length} {isStatic ? 'ads' : 'captions'}</span>
-              {isStatic && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{Object.keys(finalImages).length} with overlay</span>}
-              {isStatic && <button onClick={() => setFeedView(!feedView)} style={$.chip(true)}>{feedView ? 'Detail view' : 'Feed preview'}</button>}
               {isStatic && <button onClick={() => setShowEditor(!showEditor)} style={$.chip(showEditor)}>{showEditor ? 'Hide editor' : 'Overlay config'}</button>}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -407,51 +400,118 @@ export default function App() {
                 <span style={{ fontSize: 14, fontWeight: 500 }}>{ha[0]?.hookTitle}</span>
               </div>
 
-              {/* Feed view (static only) */}
-              {isStatic && feedView ? (
-                <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: 8 }}>
-                  {ha.map((ad, j) => { const gi = ads.indexOf(ad); const src = getImg(gi); return (
-                    <div key={j} style={{ width: 280, flexShrink: 0, ...$.card, padding: 0, overflow: 'hidden' }}>
-                      {src ? <div style={{ position: 'relative' }}><img src={src} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />{finalImages[gi] && <span style={{ position: 'absolute', top: 6, right: 6, ...$.badge('success'), fontSize: 10 }}>Overlay</span>}</div> : <div style={{ width: '100%', aspectRatio: '1', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 11, color: 'var(--text-3)' }}>No image</span></div>}
-                      <div style={{ padding: '0.75rem' }}>
-                        <p style={{ fontSize: 12, lineHeight: 1.6, whiteSpace: 'pre-wrap', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-2)' }}>{ad.primaryText}</p>
-                        <div style={{ borderTop: '0.5px solid var(--border)', marginTop: 8, paddingTop: 8 }}>
-                          <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{ad.description}</p>
-                          <p style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{ad.headline}</p>
-                          <span style={{ ...$.badge('info'), marginTop: 6 }}>{ad.cta}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ); })}
-                </div>
-              ) : (
-                /* Detail / caption view */
-                ha.map((ad, j) => { const gi = ads.indexOf(ad); const src = isStatic ? getImg(gi) : null; return (
-                  <div key={j} style={$.card}>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                      {isStatic && <div style={{ width: 130, flexShrink: 0, position: 'relative' }}>
-                        {src ? <><img src={src} alt="" style={{ width: '100%', borderRadius: 'var(--radius)', border: '0.5px solid var(--border)' }} />{finalImages[gi] && <span style={{ position: 'absolute', top: 4, left: 4, ...$.badge('success'), fontSize: 9 }}>Overlay</span>}</> : <div style={{ width: '100%', aspectRatio: '1', background: 'var(--surface-2)', borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 11, color: 'var(--text-3)' }}>...</span></div>}
-                      </div>}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span style={$.badge('info')}>Ad {gi + 1}</span>
-                          <CopyBtn text={`${ad.headline}\n\n${ad.primaryText}\n\n${ad.description}`} />
-                        </div>
-                        <p style={{ fontSize: 15, fontWeight: 500, marginBottom: 4 }}>{ad.headline}</p>
-                        <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap', display: '-webkit-box', WebkitLineClamp: isStatic ? 4 : 8, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ad.primaryText}</p>
-                        <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{ad.description}</p>
-                        <span style={{ ...$.badge('info'), marginTop: 6 }}>{ad.cta}</span>
-                      </div>
-                    </div>
-                    {isStatic && ad.imagePrompt && <details style={{ marginTop: 8 }}><summary style={{ fontSize: 11, color: 'var(--text-3)', cursor: 'pointer' }}>Prompts</summary>
-                      <div style={{ marginTop: 6 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase' }}>Grok prompt</span><CopyBtn text={ad.imagePrompt} /></div>
-                        <p style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: 'var(--text-3)', background: 'var(--surface-2)', padding: '4px 6px', borderRadius: 'var(--radius)', lineHeight: 1.5, marginTop: 2 }}>{ad.imagePrompt}</p>
-                      </div>
-                    </details>}
+              {ha.map((ad, j) => { const gi = ads.indexOf(ad); const src = isStatic ? getImg(gi) : null; return (
+                <div key={j} style={{ ...$.card, padding: 0, overflow: 'hidden' }}>
+                  {/* Ad header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '0.5px solid var(--border)' }}>
+                    <span style={$.badge('info')}>Ad {gi + 1}</span>
+                    <CopyBtn text={`${ad.headline}\n\n${ad.primaryText}\n\n${ad.description}`} />
                   </div>
-                ); })
-              )}
+
+                  {/* Caption section */}
+                  <div style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--border)' }}>
+                    <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{ad.headline}</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap', display: '-webkit-box', WebkitLineClamp: isStatic ? 3 : 8, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ad.primaryText}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{ad.description}</p>
+                  </div>
+
+                  {/* Meta placement previews — horizontal scroll */}
+                  {isStatic && src && (
+                    <div style={{ padding: '12px 0' }}>
+                      <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 16px' }}>
+                        {/* Facebook Feed */}
+                        <div style={{ flexShrink: 0, width: 200 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--text-3)"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Facebook Feed</span>
+                          </div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius)', overflow: 'hidden', border: '0.5px solid var(--border)' }}>
+                            <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--border)' }} />
+                              <div><p style={{ fontSize: 10, fontWeight: 500 }}>Legacy Planners</p><p style={{ fontSize: 8, color: 'var(--text-3)' }}>Sponsored</p></div>
+                            </div>
+                            <p style={{ fontSize: 9, color: 'var(--text-2)', padding: '0 10px 6px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ad.primaryText}</p>
+                            <img src={src} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
+                            <div style={{ padding: '6px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div><p style={{ fontSize: 8, color: 'var(--text-3)' }}>{ad.description}</p><p style={{ fontSize: 10, fontWeight: 500 }}>{ad.headline}</p></div>
+                              <div style={{ fontSize: 8, padding: '3px 8px', border: '0.5px solid var(--border)', borderRadius: 4 }}>{ad.cta || 'Learn more'}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Instagram Feed */}
+                        <div style={{ flexShrink: 0, width: 200 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--text-3)"><path d="M12 2c2.717 0 3.056.01 4.122.06 1.065.05 1.79.217 2.428.465.66.254 1.216.598 1.772 1.153.509.5.902 1.105 1.153 1.772.247.637.415 1.363.465 2.428.047 1.066.06 1.405.06 4.122s-.01 3.056-.06 4.122c-.05 1.065-.218 1.79-.465 2.428a4.883 4.883 0 01-1.153 1.772c-.5.508-1.105.902-1.772 1.153-.637.247-1.363.415-2.428.465-1.066.047-1.405.06-4.122.06s-3.056-.01-4.122-.06c-1.065-.05-1.79-.218-2.428-.465a4.89 4.89 0 01-1.772-1.153A4.904 4.904 0 012.525 18.55c-.247-.637-.415-1.363-.465-2.428C2.013 15.056 2 14.717 2 12s.01-3.056.06-4.122c.05-1.066.217-1.79.465-2.428a4.88 4.88 0 011.153-1.772A4.897 4.897 0 015.45 2.525c.638-.248 1.362-.415 2.428-.465C8.944 2.013 9.283 2 12 2zm0 5a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6zm5.25-3.5a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5z"/></svg>
+                            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Instagram Feed</span>
+                          </div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius)', overflow: 'hidden', border: '0.5px solid var(--border)' }}>
+                            <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--border)' }} />
+                              <p style={{ fontSize: 10, fontWeight: 500 }}>legacyplannersg</p>
+                              <span style={{ fontSize: 8, color: 'var(--text-3)' }}>Sponsored</span>
+                            </div>
+                            <img src={src} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }} />
+                            <div style={{ padding: '8px 10px' }}>
+                              <p style={{ fontSize: 9, color: 'var(--text-2)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}><strong>legacyplannersg</strong> {ad.primaryText}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Instagram Stories */}
+                        <div style={{ flexShrink: 0, width: 130 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--text-3)"><path d="M12 2c2.717 0 3.056.01 4.122.06 1.065.05 1.79.217 2.428.465.66.254 1.216.598 1.772 1.153.509.5.902 1.105 1.153 1.772.247.637.415 1.363.465 2.428.047 1.066.06 1.405.06 4.122s-.01 3.056-.06 4.122c-.05 1.065-.218 1.79-.465 2.428a4.883 4.883 0 01-1.153 1.772c-.5.508-1.105.902-1.772 1.153-.637.247-1.363.415-2.428.465-1.066.047-1.405.06-4.122.06s-3.056-.01-4.122-.06c-1.065-.05-1.79-.218-2.428-.465a4.89 4.89 0 01-1.772-1.153A4.904 4.904 0 012.525 18.55c-.247-.637-.415-1.363-.465-2.428C2.013 15.056 2 14.717 2 12s.01-3.056.06-4.122c.05-1.066.217-1.79.465-2.428a4.88 4.88 0 011.153-1.772A4.897 4.897 0 015.45 2.525c.638-.248 1.362-.415 2.428-.465C8.944 2.013 9.283 2 12 2zm0 5a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6zm5.25-3.5a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5z"/></svg>
+                            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>IG Stories</span>
+                          </div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius)', overflow: 'hidden', border: '0.5px solid var(--border)', aspectRatio: '9/16', position: 'relative' }}>
+                            <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
+                              <span style={{ fontSize: 8, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>legacyplannersg</span>
+                            </div>
+                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 8px', background: 'rgba(0,0,0,0.4)' }}>
+                              <p style={{ fontSize: 8, color: '#fff', textAlign: 'center' }}>{ad.cta || 'Learn more'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Facebook Stories */}
+                        <div style={{ flexShrink: 0, width: 130 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--text-3)"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>FB Stories</span>
+                          </div>
+                          <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius)', overflow: 'hidden', border: '0.5px solid var(--border)', aspectRatio: '9/16', position: 'relative' }}>
+                            <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
+                              <span style={{ fontSize: 8, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>Legacy Planners</span>
+                            </div>
+                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 8px', background: 'rgba(0,0,0,0.4)' }}>
+                              <p style={{ fontSize: 8, color: '#fff', textAlign: 'center' }}>{ad.cta || 'Learn more'}</p>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                  )}
+
+                  {/* Caption-only mode: just show full text */}
+                  {!isStatic && (
+                    <div style={{ padding: '12px 16px' }}>
+                      <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{ad.primaryText}</p>
+                    </div>
+                  )}
+
+                  {/* Expandable prompts */}
+                  {isStatic && ad.imagePrompt && <details style={{ padding: '0 16px 12px' }}><summary style={{ fontSize: 11, color: 'var(--text-3)', cursor: 'pointer' }}>Prompts</summary>
+                    <div style={{ marginTop: 6 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase' }}>Grok prompt</span><CopyBtn text={ad.imagePrompt} /></div>
+                      <p style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: 'var(--text-3)', background: 'var(--surface-2)', padding: '4px 6px', borderRadius: 'var(--radius)', lineHeight: 1.5, marginTop: 2 }}>{ad.imagePrompt}</p>
+                    </div>
+                  </details>}
+                </div>
+              ); })}
             </div>);
           })}
         </div>}
